@@ -53,6 +53,7 @@ uv init --package frontend
 - lägg till dependencis i frontend och backend (pyproject)
 - uv sync --all-packages
 
-Kommando för (uvicorn?)
+Kommando för uvicorn? - spinna upp webservern för fastapi
 uv run uvicorn api:app --reload
+
 
