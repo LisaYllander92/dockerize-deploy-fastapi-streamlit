@@ -56,4 +56,18 @@ uv init --package frontend
 Kommando för uvicorn? - spinna upp webservern för fastapi
 uv run uvicorn api:app --reload
 
+localhost:8000
+
+
+kolla backend: 
+uv run unvicorn api:app --reload (api.py + app=FrastAPI)
+http://127.0.0.1:8000/pokemon/stats
+
+kolla frontend: 
+uv run streamlit run dashboard.py 
+
+# Dockerize med docker:
+öppna docker desktop
+1. skapa backend.dockerfile och frontend.dockerfile
+2. backend: FROM python:3.13-slim
 

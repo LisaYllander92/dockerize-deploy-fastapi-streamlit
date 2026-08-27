@@ -1,0 +1,8 @@
+services:
+  backend:
+    container_name: backend
+    build:
+    context: . # kommer se allt som finns i rotmappen (där docker-compose filer ligger)
+    dockerfile: dockerfiles/backend.dockerfile
+  ports: 
+    - "8000:8000"
