@@ -1,199 +1,174 @@
-# set upp Azure network and test
+# FastAPI + Streamlit → Docker → Azure
+![](image.png)
+Backend (FastAPI) och frontend (Streamlit) som separata, frikopplade delar. De pratar med varandra via HTTP-requests, körs i varsin Docker-container, och deployas till Azure.
 
-main.tf:
-# Source: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
-# We strongly recommend using the required_providers block to set the
-# Azure Provider source and version being used
-terraform {
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = " ~> 5.0"
-    }
-  }
-}
+```
+Backend (FastAPI, Docker) <--requests--> Frontend (Streamlit, Docker) --> Deploy till Azure
+```
 
-# Configure the Microsoft Azure Provider
-provider "azurerm" {
-  features {}
-}
+## 1. Skapa projektstruktur (lokalt, VS Code)
 
-# Create a resource group
-resource "azurerm_resource_group" "test_terraform-rg" {
-  name     = "test_terraform"
-  location = "swedencentral"
-}
-
-# Create a virtual network within the resource group
-resource "azurerm_virtual_network" "example" {
-  name                = "example-network"
-  resource_group_name = azurerm_resource_group.test_terraform-rg.name
-  location            = azurerm_resource_group.test_terraform-rg.location
-  address_space       = ["10.0.0.0/16"]
-}
-
-1. terraform init
-2. terraform validate (optional)
-3. terraform plan
-4. terraform apply --auto-approve
-5. terraform destory -auto-approve
-
-# FastApi med streamlit
-- backend and fronend decoupled
-Docker(backend (Python) - API (Fastapi)) <-requests->  Docker(fronend (streamlit)) -> Deploy (till molnet)
-
-
-Skapa paket:
+```bash
 uv init --no-package --python 3.13
-
 uv init --package backend
 uv init --package frontend
+```
 
+- Lägg till dependencies i respektive `pyproject.toml` (backend/frontend var för sig)
+- Installera allt:
+```bash
+uv sync --all-packages
+```
 
-- lägg till dependencis i frontend och backend (pyproject)
-- uv sync --all-packages
+## 2. Kör lokalt (utan Docker) – för att testa innan containerisering
 
-Kommando för uvicorn? - spinna upp webservern för fastapi
+**Backend:**
+```bash
 uv run uvicorn api:app --reload
+```
+Startar FastAPI-servern på `http://127.0.0.1:8000`. Testa t.ex. `http://127.0.0.1:8000/pokemon/stats`.
 
-localhost:8000
-
-
-kolla backend:
-uv run unvicorn api:app --reload (api.py + app=FrastAPI)
-http://127.0.0.1:8000/pokemon/stats
-
-kolla frontend:
+**Frontend:**
+```bash
 uv run streamlit run dashboard.py
+```
 
-# Dockerize med docker:
-öppna docker desktop
-1. skapa backend.dockerfile och frontend.dockerfile
-Backend:
-# Officiell basimage från python (slimmad version)
+## 3. Dockerize
+
+Öppna Docker Desktop (måste vara igång).
+
+**`backend.dockerfile`:**
+```dockerfile
 FROM python:3.13-slim
 
-# Kopierar allt från backend folder till /app folder, som skapas om den inte redan existerade
 COPY backend/ /app/
 
-# Installear uv
 RUN pip install --no-cache-dir uv
 
-# Byter directory till /app
 WORKDIR /app
-
-# Installerar alla dependencies från pyproject.toml utan dev packages
 RUN uv sync --no-dev
 
-# Byter directory till vart vi har api.py
 WORKDIR /app/src/backend
+CMD ["uv", "run", "uvicorn", "api:app", "--host", "0.0.0.0"]
+```
 
-# Kör kommandon (0.0.0.0 -> accepterar connections från lokal maskin och external)
-CMD [ "uv" , "run", "uvicorn", "api:app", "--host", "0.0.0.0"]
+**`frontend.dockerfile`:**
+```dockerfile
+FROM python:3.13-slim
 
-docker-compose (backend):
+COPY frontend/ /app/
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+RUN uv sync --no-dev
+
+WORKDIR /app/src/frontend
+CMD ["uv", "run", "streamlit", "run", "dashboard.py", "--server.address", "0.0.0.0"]
+```
+
+`--host 0.0.0.0` / `--server.address 0.0.0.0` gör att servern accepterar anrop både lokalt och utifrån containern.
+
+**`docker-compose.yaml`:**
+```yaml
 services:
   backend:
     container_name: backend
     build:
-      context: . # kommer se allt som finns i rotmappen (där docker-compose filer ligger)
+      context: .
       dockerfile: dockerfiles/backend.dockerfile
     ports:
       - "8000:8000"
 
-testa att det funkar och bygg image:
-docker compose up -d
-
-i gitbash: (ta bort onödigt men ha kvar och förklara kommandon)
-lisay@Lisas MINGW64 ~
-$ docker ps
-CONTAINER ID   IMAGE                                        COMMAND                  CREATED         STATUS         PORTS                                         NAMES
-ca8623e379f9   dockerize-deploy-fastapi-streamlit-backend   "uv run uvicorn api:…"   6 seconds ago   Up 3 seconds   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp   backend
-
-lisay@Lisas MINGW64 ~
-$ ^C
-
-lisay@Lisas MINGW64 ~
-$ docker exec -it ca8623e379f9 bash
-root@ca8623e379f9:/app/src/backend#
-root@ca8623e379f9:/app/src/backend# cat api.py (concatinat)
-uv pip freeze
-Ctrl + d - exit
-
-# jump in to an existing running container
-docker exec -it container_name bash
-
-# if container is dead - spin up a new one interactively
-docker run -it image_name bash
-
-frontend.dockerfile:
-# Officiell basimage från python (slimmad version)
-FROM python:3.13-slim 
-
-# Kopierar allt från frontend folder till /app folder, som skapas om den inte redan existerade
-COPY frontend/ /app/ 
-
-# Installear uv
-RUN pip install --no-cache-dir uv 
-
-# Byter directory till /app
-WORKDIR /app 
-
-# Installerar alla dependencies från pyproject.toml utan dev packages
-RUN uv sync --no-dev 
-
-# Byter directory till vart vi har api.py
-WORKDIR /app/src/frontend
-
-# Kör kommandon (0.0.0.0 -> accepterar connections från lokal maskin och external)
-CMD [ "uv" , "run", "streamlit", "run", "dashboard.py", "--server.address", "0.0.0.0"] 
-
-uppdatera dashboard:
-import streamlit as st
-import httpx 
-import os
-
-# os.getenv försöker hämtar miljövariabel BACKEND_URL, om den inte finns - default andra variabeln (http...)
-BASE_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
-
-def main():
-    st.markdown("# PokeDash")
-
-    stats = httpx.get(f"{BASE_URL}/pokemon/stats", timeout=30).json()
-    st.dataframe(stats)
-
-if __name__ == "__main__":
-    main()
-
-lägg till i docker-compose.yaml:
-
   frontend:
     container_name: frontend
     build:
-      context: . 
+      context: .
       dockerfile: dockerfiles/frontend.dockerfile
-    ports: 
+    ports:
       - "8501:8501"
     environment:
       BACKEND_URL: http://backend:8000
+```
 
-  I portal.azure:
-- skapa resource group
-- skapa container registry 
-i accsess keys (admin user) - kopiera login server
-lägg till i docker-compose.yaml (vsc): 
-image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/backend:v1
-image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/frontend:v1
+`context: .` innebär att build-processen ser hela rotmappen (där `docker-compose.yaml` ligger).
 
-I terminalen:
-# login to acr 
-az acr login --name <login_server>
-för att logga in i azure och acr
-(samma som docker login men utan lösenord oså)
+**Bygg och starta:**
+```bash
+docker compose up -d
+```
 
-docker compose build
-docker images - borde finnas nya som vi skapat
-docker compose push - pusha upp till azure container registry
+## 4. Koppla frontend mot backend
+
+I `dashboard.py`:
+```python
+import os
+
+# Läser miljövariabeln BACKEND_URL, annars fallback till localhost
+BASE_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+```
+
+Detta gör att samma kod funkar både lokalt (fallback) och i Docker (miljövariabeln sätts i `docker-compose.yaml`).
+
+## 5. Användbara Docker-kommandon
+
+```bash
+docker ps                          # lista körande containers
+docker exec -it <container_id> bash   # hoppa in i en körande container
+docker run -it <image_name> bash      # starta en ny container interaktivt (om ingen redan kör)
+```
+
+Inne i en container, t.ex.:
+```bash
+cat api.py        # visa filinnehåll
+uv pip freeze      # lista installerade paket
+exit               # (Ctrl+D) lämna containern
+```
+
+## 6. Azure Container Registry (ACR)
+
+**I Azure Portal:**
+1. Skapa en resource group
+2. Skapa ett Container Registry
+3. Under **"Access keys"** → aktivera **Admin user**, kopiera **Login server**
+
+**I `docker-compose.yaml`**, lägg till image-namn (byggs mot ditt registry):
+```yaml
+services:
+  backend:
+    image: <login-server>/backend:v1
+  frontend:
+    image: <login-server>/frontend:v1
+```
+
+**I terminalen:**
+```bash
+az acr login --name <login_server>   # logga in mot registry (kräver az login sedan innan)
+
+docker compose build     # bygg images lokalt
+docker images             # bekräfta att de nya images finns
+docker compose push       # pusha upp till Azure Container Registry
+```
+
+## 7. Azure Container App – backend
+
+I Azure Portal:
+1. Skapa en Container App i rätt resource group
+2. Peka på imagen i ditt Container Registry
+3. Aktivera **Ingress** (tillåter in/utgående trafik/requests)
+4. Testa via **Application URL** (lägg ev. till `/docs` för FastAPI:s auto-genererade dokumentation)
+
+## 8. Azure App Service – frontend
+
+I Azure Portal:
+1. Skapa en **Web App** (välj **Container**, inte databas)
+2. Under **Environment variables**, lägg till:
+   - `WEBSITES_PORT` = `8501` (porten Streamlit körs på)
+   - `BACKEND_URL` = `<Application URL från backend Container App>`
+3. Starta om appen (refresh)
+4. Öppna **Default domain** → ska visa Streamlit-dashboarden
+
+
 
 
 
