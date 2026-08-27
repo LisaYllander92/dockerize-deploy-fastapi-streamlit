@@ -7,13 +7,12 @@ services:
     ports: 
       - "8000:8000" # mappar vår host till containern
 
-  services:
-    frontend:
-      container_name: frontend
-      build:
-        context: . 
-        dockerfile: dockerfiles/frontend.dockerfile
-      ports: 
-        - "8501:8501"
-      environment:
-        BACKEND_URL: http://backend:8000
+  frontend:
+    container_name: frontend
+    build:
+      context: . 
+      dockerfile: dockerfiles/frontend.dockerfile
+    ports: 
+      - "8501:8501"
+    environment:
+      BACKEND_URL: http://backend:8000

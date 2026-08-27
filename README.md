@@ -164,3 +164,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+lägg till i docker-compose.yaml:
+
+  frontend:
+    container_name: frontend
+    build:
+      context: . 
+      dockerfile: dockerfiles/frontend.dockerfile
+    ports: 
+      - "8501:8501"
+    environment:
+      BACKEND_URL: http://backend:8000
+
