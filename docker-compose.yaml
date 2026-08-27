@@ -2,7 +2,18 @@ services:
   backend:
     container_name: backend
     build:
-    context: . # kommer se allt som finns i rotmappen (där docker-compose filer ligger)
-    dockerfile: dockerfiles/backend.dockerfile
-  ports: 
-    - "8000:8000"
+      context: . # kommer se allt som finns i rotmappen (där docker-compose filer ligger)
+      dockerfile: dockerfiles/backend.dockerfile
+    ports: 
+      - "8000:8000" # mappar vår host till containern
+
+  services:
+    frontend:
+      container_name: frontend
+      build:
+        context: . 
+        dockerfile: dockerfiles/frontend.dockerfile
+      ports: 
+        - "8501:8501"
+      environment:
+        BACKEND_URL: http://backend:8000
