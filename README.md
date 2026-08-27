@@ -177,3 +177,23 @@ lägg till i docker-compose.yaml:
     environment:
       BACKEND_URL: http://backend:8000
 
+  I portal.azure:
+- skapa resource group
+- skapa container registry 
+i accsess keys (admin user) - kopiera login server
+lägg till i docker-compose.yaml (vsc): 
+image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/backend:v1
+image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/frontend:v1
+
+I terminalen:
+# login to acr 
+az acr login --name <login_server>
+för att logga in i azure och acr
+(samma som docker login men utan lösenord oså)
+
+docker compose build
+docker images - borde finnas nya som vi skapat
+docker compose push - pusha upp till azure container registry
+
+
+

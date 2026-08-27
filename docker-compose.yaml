@@ -1,14 +1,17 @@
 services:
   backend:
     container_name: backend
+    #platform: linux/amd64
     build:
       context: . # kommer se allt som finns i rotmappen (där docker-compose filer ligger)
       dockerfile: dockerfiles/backend.dockerfile
     ports: 
       - "8000:8000" # mappar vår host till containern
+    image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/backend:v1
 
   frontend:
     container_name: frontend
+    #platform: linux/amd64
     build:
       context: . 
       dockerfile: dockerfiles/frontend.dockerfile
@@ -16,3 +19,4 @@ services:
       - "8501:8501"
     environment:
       BACKEND_URL: http://backend:8000
+    image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/frontend:v1
