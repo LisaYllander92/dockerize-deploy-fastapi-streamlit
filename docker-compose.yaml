@@ -7,7 +7,7 @@ services:
       dockerfile: dockerfiles/backend.dockerfile
     ports: 
       - "8000:8000" # mappar vår host till containern
-    image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/backend:v1
+    image: ${ACR_LOGIN_SERVER}/backend:${IMAGE_TAG:-lastest}
 
   frontend:
     container_name: frontend
@@ -19,4 +19,4 @@ services:
       - "8501:8501"
     environment:
       BACKEND_URL: http://backend:8000
-    image: pokemonacr-gvc0cgftgkhsekhh.azurecr.io/frontend:v1
+    image: ${ACR_LOGIN_SERVER}/frontend:${IMAGE_TAG:-lastest}
