@@ -1,5 +1,7 @@
 # FastAPI + Streamlit → Docker → Azure
 
+![](image.png)
+
 Backend (FastAPI) och frontend (Streamlit) som separata, frikopplade delar. De pratar med varandra via HTTP-requests, körs i varsin Docker-container, och deployas till Azure.
 
 ```
@@ -354,7 +356,6 @@ services:
   frontend:
     image: ${ACR_LOGIN_SERVER}/frontend:${IMAGE_TAG:-latest}
 ```
-> ⚠️ Rättat: `${IMAGE_TAG:-lastest}` var felstavat – ska vara `latest`, annars fungerar inte fallback-värdet som tänkt om `IMAGE_TAG` saknas.
 
 `${ACR_LOGIN_SERVER}` och `${IMAGE_TAG}` hämtas automatiskt från miljövariablerna som `deploy_infra.sh` exporterade i steg 3 ovan.
 
